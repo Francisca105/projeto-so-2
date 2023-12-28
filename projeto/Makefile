@@ -7,7 +7,6 @@ CFLAGS = -g -std=c17 -D_POSIX_C_SOURCE=200809L -I. \
 		 -pthread
 # -fsanitize=address -fsanitize=undefined 
 
-
 ifneq ($(shell uname -s),Darwin) # if not MacOS
 	CFLAGS += -fmax-errors=5
 endif
@@ -23,8 +22,11 @@ client/client: common/io.o client/main.c client/api.o client/parser.o
 %.o: %.c %.h
 	$(CC) $(CFLAGS) -c ${@:.o=.c} -o $@
 
-run: server/ems
-	@./server/ems
+run_s: server/ems
+	@./server/ems /tmp/server.pipe
+
+run_c: client/client
+	@./client/client /tmp/request.pipe /tmp/response.pipe /tmp/server.pipe /home/francisca105/ist/SO/projeto-so-2/projeto/jobs/a.jobs
 
 clean:
 	rm -f common/*.o client/*.o server/*.o server/ems client/client
