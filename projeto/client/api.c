@@ -9,28 +9,43 @@
 #include <unistd.h>
 #include <sys/types.h>
 
+int server_fd;
+int req_pipe_fd;
+int resp_pipe_fd;
+
 int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const* server_pipe_path) {
   //TODO: create pipes and connect to the server
   open_pipe(req_pipe_path, REQ_PIPE_MODE);
   open_pipe(resp_pipe_path, RESP_PIPE_MODE);
 
-  int server = open(server_pipe_path, O_WRONLY);
+  // Server pipe
+  server_fd = safe_open(server_pipe_path, O_WRONLY);
   
-  if (server == -1) {
-    perror("Failed to open server pipe (via Client)\n");
-    exit(EXIT_FAILURE);
-  }
+  char code = '1';
+  safe_write(server_fd, &code, sizeof(code));
+  safe_write(server_fd, req_pipe_path, MAX_PIPE_NAME);
+  safe_write(server_fd, resp_pipe_path, MAX_PIPE_NAME);
+
+  close(server_fd);
+  // 
+
+  req_pipe_fd = safe_open(req_pipe_path, O_WRONLY);
+  resp_pipe_fd = safe_open(resp_pipe_path, O_RDONLY);
   
-  char code = SETUP_CODE;
-  safe_write(server, &code, sizeof(code));
-  safe_write(server, req_pipe_path, MAX_PIPE_NAME);
-  safe_write(server, resp_pipe_path, MAX_PIPE_NAME);
-  
+  int session;
+  // safe_read(resp_pipe_fd, &session, sizeof(int));
+  fprintf(stderr, "[Info] New session with Id: %d\n", session);
+
   return 1;
 }
 
 int ems_quit(void) { 
   //TODO: close pipes
+  char code = '2';
+  safe_write(req_pipe_fd, &code, sizeof(code));
+
+  close(req_pipe_fd);
+  close(resp_pipe_fd);
 
   return 1;
 }

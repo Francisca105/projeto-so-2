@@ -12,26 +12,50 @@
 #include "common/io.h"
 #include "operations.h"
 
+int S = 0;
+
 typedef struct {
   char req_pipe_path[MAX_PIPE_NAME];
   char resp_pipe_path[MAX_PIPE_NAME];
 } client_args;
 
 void *worker_thread_func(void *args) {
-  client_args *client_args = (struct client_args*) args;
+  client_args *c_args = (client_args*) args;
 
-  char *req_pipe_path = client_args->req_pipe_path;
-  char *resp_pipe_path = client_args->resp_pipe_path;
-  int req_pipe_fd = safe_open(req_pipe_path, O_WRONLY);
-  int resp_pipe_fd = safe_open(resp_pipe_path, O_RDONLY);
+  char *req_pipe_path = c_args->req_pipe_path;
+  char *resp_pipe_path = c_args->resp_pipe_path;
+  int req_pipe_fd = safe_open(req_pipe_path, O_RDONLY);
+  int resp_pipe_fd = safe_open(resp_pipe_path, O_WRONLY);
 
-  while(1) {
-    char code[2];
-    safe_read(resp_pipe_fd, &code, sizeof(char));
-    printf("Code: %s\n", code);
-  }
+  int first = 1;
 
+  fprintf(stderr, "Worker thread started\n");
+
+  // while(1) {
+  //   if(first) {
+  //     first = 0;
+  //     int session = 0;
+  //     // safe_write(resp_pipe_fd, &session, sizeof(int)+1); // Problematico TODO
+  //   }
+  //   printf("Waiting for request...\n");
+  //   char code;
+  //   safe_read(req_pipe_fd, &code, sizeof(char));
+  //   printf("Code: %c\n", code);
+
+  //   switch (code){
+  //   // case QUIT_CODE:
+      
+  //   //   break;
+  //   default:break;
+  //   }
+  // }
+
+  fprintf(stderr, "Worker thread ended\n");
+  close(req_pipe_fd);
+  close(resp_pipe_fd);
   free(args);
+
+  return NULL;
 }
 
 void *main_thread_func(void *pathname) {
@@ -43,7 +67,7 @@ void *main_thread_func(void *pathname) {
     printf("Waiting for client...\n");
     int server_fd = safe_open(server_pathname, O_RDONLY);
 
-    char code[2];
+    char code;
     safe_read(server_fd, &code, sizeof(char));
 
     // Unecessary to check the code due to the message format being always correct
@@ -62,7 +86,7 @@ void *main_thread_func(void *pathname) {
     pthread_t worker_thread;
     if (pthread_create(&worker_thread, NULL, worker_thread_func, args) != 0) {
       fprintf(stderr, "Failed to create worker thread\n");
-      return 1;
+      exit(EXIT_FAILURE);
     }
   }
   

@@ -137,4 +137,6 @@ void open_pipe(const char *pathname, mode_t mode) {
     fprintf(stderr, "mkfifo failed: %s\n", strerror(errno));
     exit(EXIT_FAILURE);
   }
+
+  fprintf(stderr, "Pipe %s created\n", pathname);
 }
