@@ -11,23 +11,27 @@
 
 int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const* server_pipe_path) {
   //TODO: create pipes and connect to the server
+  open_pipe(req_pipe_path, REQ_PIPE_MODE);
+  open_pipe(resp_pipe_path, RESP_PIPE_MODE);
+
   int server = open(server_pipe_path, O_WRONLY);
   
   if (server == -1) {
     perror("Failed to open server pipe (via Client)\n");
     exit(EXIT_FAILURE);
   }
-  char * buffer = malloc(sizeof(char) * MAX_PIPE_NAME);
-  buffer[0] = SETUP_CODE;
-  memcpy(buffer + sizeof(char), req_pipe_path, MAX_PIPE_NAME);
-  memcpy(buffer + sizeof(char) + MAX_PIPE_NAME, resp_pipe_path, MAX_PIPE_NAME);
-  try_write(server, buffer, sizeof(SETUP_CODE));
+  
+  char code = SETUP_CODE;
+  safe_write(server, &code, sizeof(code));
+  safe_write(server, req_pipe_path, MAX_PIPE_NAME);
+  safe_write(server, resp_pipe_path, MAX_PIPE_NAME);
   
   return 1;
 }
 
 int ems_quit(void) { 
   //TODO: close pipes
+
   return 1;
 }
 

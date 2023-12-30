@@ -14,4 +14,6 @@
 #define SHOW_CODE '5'
 #define LIST_CODE '6'
 
-#define SERVER_PIPE 0777
+#define SERVER_PIPE_MODE 0777
+#define REQ_PIPE_MODE 0777
+#define RESP_PIPE_MODE 0777

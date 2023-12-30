@@ -12,42 +12,58 @@
 #include "common/io.h"
 #include "operations.h"
 
-void *worker_thread_func(void *rwlock) {
-  // TODO
+typedef struct {
+  char req_pipe_path[MAX_PIPE_NAME];
+  char resp_pipe_path[MAX_PIPE_NAME];
+} client_args;
+
+void *worker_thread_func(void *args) {
+  client_args *client_args = (struct client_args*) args;
+
+  char *req_pipe_path = client_args->req_pipe_path;
+  char *resp_pipe_path = client_args->resp_pipe_path;
+  int req_pipe_fd = safe_open(req_pipe_path, O_WRONLY);
+  int resp_pipe_fd = safe_open(resp_pipe_path, O_RDONLY);
+
+  while(1) {
+    char code[2];
+    safe_read(resp_pipe_fd, &code, sizeof(char));
+    printf("Code: %s\n", code);
+  }
+
+  free(args);
 }
 
 void *main_thread_func(void *pathname) {
   char *server_pathname = (char*) pathname;
 
-  if (unlink(server_pathname) != 0 && errno != ENOENT) {
-    fprintf(stderr, "unlink(%s) failed: %s\n", server_pathname, strerror(errno));
-    exit(EXIT_FAILURE);
-  }
-  fprintf(stderr, "Server pipe: %s\n", server_pathname);
-  if (mkfifo(server_pathname, SERVER_PIPE) != 0) {
-    fprintf(stderr, "mkfifo failed: %s\n", strerror(errno));
-    exit(EXIT_FAILURE);
-  }
+  open_pipe(server_pathname, SERVER_PIPE_MODE);
 
-  // TODO: Multi-threaded server
-  pthread_t worker_thread;
-  if (pthread_create(&worker_thread, NULL, worker_thread_func, NULL) != 0) {
-    fprintf(stderr, "Failed to create worker thread\n");
-    return 1;
-  }
+  while (1) {
+    printf("Waiting for client...\n");
+    int server_fd = safe_open(server_pathname, O_RDONLY);
 
-  
+    char code[2];
+    safe_read(server_fd, &code, sizeof(char));
 
-  while (1) { // Copilot
-    int server_fd = open(server_pathname, O_RDONLY);
-    if (server_fd == -1) {
-      fprintf(stderr, "Failed to open server pipe\n");
+    // Unecessary to check the code due to the message format being always correct
+    char req_pipe_path[MAX_PIPE_NAME];
+    char resp_pipe_path[MAX_PIPE_NAME];
+    safe_read(server_fd, req_pipe_path, MAX_PIPE_NAME);
+    safe_read(server_fd, resp_pipe_path, MAX_PIPE_NAME);
+    fprintf(stderr, "Request pipe: %s\n", req_pipe_path);
+    fprintf(stderr, "Response pipe: %s\n", resp_pipe_path);
+
+    client_args *args = (client_args*) malloc(sizeof(client_args));
+    strncpy(args->req_pipe_path, req_pipe_path, MAX_PIPE_NAME);
+    strncpy(args->resp_pipe_path, resp_pipe_path, MAX_PIPE_NAME);
+
+    // TODO: Multi-threaded server
+    pthread_t worker_thread;
+    if (pthread_create(&worker_thread, NULL, worker_thread_func, args) != 0) {
+      fprintf(stderr, "Failed to create worker thread\n");
       return 1;
     }
-
-    char command;
-    read_pipe_line(server_fd, &command, sizeof(command));
-    printf("Received command: %c\n", command);
   }
   
   return NULL;

@@ -88,65 +88,53 @@ int print_str(int fd, const char *str) {
 
 // Begin of the changes 
 
-// Correia work: https://github.com/ist199211-ist199341/tecnicofs-so/blob/master/common/common.c
-ssize_t try_read(int fd, void *buf, size_t count) {
-    ssize_t bytes_read;
-    do {
-        bytes_read = read(fd, buf, count);
-    } while (bytes_read < 0 && errno == EINTR);
-    return bytes_read;
+void *safe_malloc(size_t size) {
+  void *ptr = malloc(size);
+  if (ptr == NULL) {
+    fprintf(stderr, "Failed to allocate memory\n");
+    exit(1);
+  }
+  return ptr;
 }
 
-ssize_t try_write(int fd, const void *buf, size_t count) {
-    ssize_t bytes_written;
-    do {
-        bytes_written = write(fd, buf, count);
-    } while (bytes_written < 0 && errno == EINTR);
-    return bytes_written;
-}
-
-void read_pipe_line(int fd, char *buffer, size_t buffer_size) {
-  size_t i = 0;
-  while (i < buffer_size) {
-    ssize_t read_bytes = read(fd, buffer + i, 1);
-    if (read_bytes == -1) {
-      fprintf(stderr, "[ERR]: read failed\n");
-      exit(EXIT_FAILURE);
-    } else if (read_bytes == 0) {
-      buffer[i] = '\0';
-      break;
-    }
-
-    if (buffer[i] == '\n') {
-      buffer[i] = '\0';
-      break;
-    }
-
-    i++;
+void safe_write(int fd, void *buffer, size_t size) {
+  if(write(fd, buffer, size) == -1) {
+    fprintf(stderr, "[ERR]: write failed: %s\n", strerror(errno));
+    exit(EXIT_FAILURE);
   }
 }
 
-void send_char_msg(int tx, char const *str) {
-  size_t len = strlen(str);
-  size_t written = 0;
+void safe_read(int fd, void *buffer, size_t size) {
+  ssize_t r = read(fd, buffer, size);
 
-  while (written < len) {
-    ssize_t ret = write(tx, str + written, len - written);
-    if (ret < 0) {
-      fprintf(stderr, "[ERR]: write failed: %s\n", strerror(errno));
-      exit(EXIT_FAILURE);
-    } else {
-      written += ret;
-    }
+  if(r == -1) {
+    fprintf(stderr, "[Err]: read failed: %s\n", strerror(errno));
+    exit(EXIT_FAILURE);
+  } else if (r == 0) {
+    fprintf(stderr, "[Err]: unexpected end of file\n");
+    exit(EXIT_FAILURE);
   }
 }
 
-// char * setup_msg(char *request_pipe, char *response_pipe) {
-//   char *buffer;
+int safe_open(const char *pathname, int flags) {
+  int fd = open(pathname, flags);
 
-//   memcpy(buffer, SETUP_CODE, sizeof(char)); 
-//   memcpy(buffer + sizeof(char), request_pipe, MAX_PIPE_NAME);
-//   memcpy(buffer + sizeof(char) + MAX_PIPE_NAME, response_pipe, MAX_PIPE_NAME);
+  if(fd == -1) {
+    fprintf(stderr, "[Err]: open failed: %s\n", strerror(errno));
+    exit(EXIT_FAILURE);
+  }
 
-//   return buffer;
-// }
+  return fd;
+}
+
+void open_pipe(const char *pathname, mode_t mode) {
+  if (unlink(pathname) != 0 && errno != ENOENT) {
+    fprintf(stderr, "unlink(%s) failed: %s\n", pathname, strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+
+  if (mkfifo(pathname, mode) != 0) {
+    fprintf(stderr, "mkfifo failed: %s\n", strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+}
