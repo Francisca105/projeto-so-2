@@ -27,9 +27,61 @@ void *worker_thread_func(void *args) {
   int req_pipe_fd = safe_open(req_pipe_path, O_RDONLY);
   int resp_pipe_fd = safe_open(resp_pipe_path, O_WRONLY);
 
-  int first = 1;
-
   fprintf(stderr, "Worker thread started\n");
+
+  S++;
+  safe_write(resp_pipe_fd, &S, sizeof(int));
+
+  char code;
+
+  do {
+      safe_read(req_pipe_fd, &code, sizeof(char));
+
+      switch (code) {
+          case QUIT_CODE:
+            close(req_pipe_fd);
+            close(resp_pipe_fd);
+          break;
+          case CREATE_CODE:
+            unsigned int event_id_c;
+            size_t num_rows;
+            size_t num_cols;
+            
+            safe_read(req_pipe_fd, &event_id_c, sizeof(unsigned int));
+            safe_read(req_pipe_fd, &num_rows, sizeof(size_t));
+            safe_read(req_pipe_fd, &num_cols, sizeof(size_t));
+
+            int res = ems_create(event_id_c, num_rows, num_cols);
+            safe_write(resp_pipe_fd, &res, sizeof(int));
+          break;
+          case SHOW_CODE:
+            // TODO: Implement
+            // unsigned int event_id_s;
+            // safe_read(req_pipe_fd, &event_id_s, sizeof(unsigned int));
+
+            // int res3 = ems_show(resp_pipe_fd, event_id_s);
+            // safe_write(resp_pipe_fd, &res3, sizeof(int));
+          break;
+          // This need to be the last case to work properly
+          case RESERVE_CODE:
+            unsigned int event_id_r;
+            size_t num_seats;
+            
+            safe_read(req_pipe_fd, &event_id_r, sizeof(unsigned int));
+            safe_read(req_pipe_fd, &num_seats, sizeof(size_t));
+
+            size_t xs[num_seats];
+            size_t ys[num_seats];
+
+            safe_read(req_pipe_fd, &xs, sizeof(size_t[num_seats]));
+            safe_read(req_pipe_fd, &ys, sizeof(size_t[num_seats]));
+
+            int res2 = ems_reserve(event_id_r, num_seats, xs, ys);
+            safe_write(resp_pipe_fd, &res2, sizeof(int));
+          break;
+      }
+  } while (code != QUIT_CODE);
+
 
   // while(1) {
   //   if(first) {
