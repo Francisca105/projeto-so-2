@@ -50,4 +50,7 @@ int safe_open(const char *pathname, int flags);
 /// @param mode
 void open_pipe(const char *pathname, mode_t mode);
 
+/// Safely closes a pipe.
+/// @param pathname
+void close_pipe(const char *pathname);
 #endif  // COMMON_IO_H

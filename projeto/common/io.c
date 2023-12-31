@@ -127,11 +127,15 @@ int safe_open(const char *pathname, int flags) {
   return fd;
 }
 
-void open_pipe(const char *pathname, mode_t mode) {
+void close_pipe(const char *pathname) {
   if (unlink(pathname) != 0 && errno != ENOENT) {
     fprintf(stderr, "unlink(%s) failed: %s\n", pathname, strerror(errno));
     exit(EXIT_FAILURE);
   }
+}
+
+void open_pipe(const char *pathname, mode_t mode) {
+  close_pipe(pathname);
 
   if (mkfifo(pathname, mode) != 0) {
     fprintf(stderr, "mkfifo failed: %s\n", strerror(errno));
