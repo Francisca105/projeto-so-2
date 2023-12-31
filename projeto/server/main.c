@@ -27,7 +27,7 @@ void *worker_thread_func(void *args) {
   int req_pipe_fd = safe_open(req_pipe_path, O_RDONLY);
   int resp_pipe_fd = safe_open(resp_pipe_path, O_WRONLY);
 
-  fprintf(stderr, "Worker thread started\n");
+  fprintf(stderr, "[INFO] Worker thread started\n");
 
   S++;
   safe_write(resp_pipe_fd, &S, sizeof(int));
@@ -36,6 +36,9 @@ void *worker_thread_func(void *args) {
 
   do {
       safe_read(req_pipe_fd, &code, sizeof(char));
+      int session;
+      safe_read(req_pipe_fd, &session, sizeof(int));
+
 
       switch (code) {
           case QUIT_CODE:
@@ -102,7 +105,7 @@ void *worker_thread_func(void *args) {
   //   }
   // }
 
-  fprintf(stderr, "Worker thread ended\n");
+  fprintf(stderr, "[Info] Worker thread ended\n");
   close(req_pipe_fd);
   close(resp_pipe_fd);
   free(args);
