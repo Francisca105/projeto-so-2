@@ -25,8 +25,20 @@ client/client: common/io.o client/main.c client/api.o client/parser.o
 run_s: server/ems
 	@./server/ems /tmp/server.pipe
 
-run_c: client/client
-	@./client/client /tmp/request.pipe /tmp/response.pipe /tmp/server.pipe /home/francisca105/ist/SO/projeto-so-2/projeto/jobs/a.jobs
+run_ca: client/client
+	@./client/client /tmp/request_a.pipe /tmp/response_a.pipe /tmp/server.pipe /home/francisca105/ist/SO/projeto-so-2/projeto/jobs/a.jobs
+
+run_cb: client/client
+	@./client/client /tmp/request_b.pipe /tmp/response_b.pipe /tmp/server.pipe /home/francisca105/ist/SO/projeto-so-2/projeto/jobs/b.jobs
+
+run_cc: client/client
+	@./client/client /tmp/request_c.pipe /tmp/response_c.pipe /tmp/server.pipe /home/francisca105/ist/SO/projeto-so-2/projeto/jobs/c.jobs
+
+run_cd: client/client
+	@./client/client /tmp/request_c.pipe /tmp/response_c.pipe /tmp/server.pipe /home/francisca105/ist/SO/projeto-so-2/projeto/jobs/d.jobs
+
+run_ce: client/client
+	@./client/client /tmp/request_c.pipe /tmp/response_c.pipe /tmp/server.pipe /home/francisca105/ist/SO/projeto-so-2/projeto/jobs/e.jobs
 
 clean:
 	rm -f common/*.o client/*.o server/*.o server/ems client/client

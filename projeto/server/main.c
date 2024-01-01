@@ -13,6 +13,8 @@
 #include "operations.h"
 
 int S = 0;
+int active_sessions = 0;
+int server_fd;
 
 typedef struct {
   char req_pipe_path[MAX_PIPE_NAME];
@@ -58,15 +60,17 @@ void *worker_thread_func(void *args) {
             safe_write(resp_pipe_fd, &res, sizeof(int));
           break;
           case SHOW_CODE:
-            // TODO: Implement
-            // unsigned int event_id_s;
-            // safe_read(req_pipe_fd, &event_id_s, sizeof(unsigned int));
-
-            // int res3 = ems_show(resp_pipe_fd, event_id_s);
-            // safe_write(resp_pipe_fd, &res3, sizeof(int));
+            unsigned int event_id_s;
+            safe_read(req_pipe_fd, &event_id_s, sizeof(unsigned int));
+            
+            int res3 = ems_show(resp_pipe_fd, event_id_s);
+            if(res3 == 1) {
+              fprintf(stderr, "[ERR] Failed to show event\n");
+              safe_write(resp_pipe_fd, &res3, sizeof(int));
+            }
           break;
-          // This need to be the last case to work properly
           case RESERVE_CODE:
+            fprintf(stderr, "[INFO] Reserving seats\n");
             unsigned int event_id_r;
             size_t num_seats;
             
@@ -120,7 +124,7 @@ void *main_thread_func(void *pathname) {
 
   while (1) {
     printf("Waiting for client...\n");
-    int server_fd = safe_open(server_pathname, O_RDONLY);
+    server_fd = safe_open(server_pathname, O_RDONLY);
 
     char code;
     safe_read(server_fd, &code, sizeof(char));
@@ -137,7 +141,6 @@ void *main_thread_func(void *pathname) {
     strncpy(args->req_pipe_path, req_pipe_path, MAX_PIPE_NAME);
     strncpy(args->resp_pipe_path, resp_pipe_path, MAX_PIPE_NAME);
 
-    // TODO: Multi-threaded server
     pthread_t worker_thread;
     if (pthread_create(&worker_thread, NULL, worker_thread_func, args) != 0) {
       fprintf(stderr, "Failed to create worker thread\n");
@@ -172,7 +175,6 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  //TODO: Intialize server, create worker threads
   char server_pathname[MAX_PIPE_NAME];
   strncpy(server_pathname, argv[1], sizeof(server_pathname));
   
@@ -187,7 +189,7 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "Failed to join main thread\n");
     return 1;
   }
-  
+
   while (1) {
     //TODO: Read from pipe
     //TODO: Write new client to the producer-consumer buffer

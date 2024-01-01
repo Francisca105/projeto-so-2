@@ -198,32 +198,50 @@ int ems_show(int out_fd, unsigned int event_id) {
     return 1;
   }
 
-  for (size_t i = 1; i <= event->rows; i++) {
-    for (size_t j = 1; j <= event->cols; j++) {
-      char buffer[16];
-      sprintf(buffer, "%u", event->data[seat_index(event, i, j)]);
+  int ret = 0;
+  size_t rows = event->rows;
+  size_t cols = event->cols;
 
-      if (print_str(out_fd, buffer)) {
-        perror("Error writing to file descriptor");
-        pthread_mutex_unlock(&event->mutex);
-        return 1;
-      }
+  safe_write(out_fd, &ret, sizeof(int));
 
-      if (j < event->cols) {
-        if (print_str(out_fd, " ")) {
-          perror("Error writing to file descriptor");
-          pthread_mutex_unlock(&event->mutex);
-          return 1;
-        }
-      }
-    }
+  safe_write(out_fd, &rows, sizeof(size_t));
+  safe_write(out_fd, &cols, sizeof(size_t));
 
-    if (print_str(out_fd, "\n")) {
-      perror("Error writing to file descriptor");
-      pthread_mutex_unlock(&event->mutex);
-      return 1;
-    }
+  unsigned int seats[rows * cols];
+
+  for (size_t i = 0; i < rows * cols; i++) {
+    seats[i] = event->data[i];
   }
+
+  safe_write(out_fd, seats, sizeof(unsigned int[rows * cols]));
+  
+  // TODO: delete
+  // for (size_t i = 1; i <= event->rows; i++) {
+  //   for (size_t j = 1; j <= event->cols; j++) {
+  //     char buffer[16];
+  //     sprintf(buffer, "%u", event->data[seat_index(event, i, j)]);
+
+  //     if (print_str(out_fd, buffer)) {
+  //       perror("Error writing to file descriptor");
+  //       pthread_mutex_unlock(&event->mutex);
+  //       return 1;
+  //     }
+
+  //     if (j < event->cols) {
+  //       if (print_str(out_fd, " ")) {
+  //         perror("Error writing to file descriptor");
+  //         pthread_mutex_unlock(&event->mutex);
+  //         return 1;
+  //       }
+  //     }
+  //   }
+
+  //   if (print_str(out_fd, "\n")) {
+  //     perror("Error writing to file descriptor");
+  //     pthread_mutex_unlock(&event->mutex);
+  //     return 1;
+  //   }
+  // }
 
   pthread_mutex_unlock(&event->mutex);
   return 0;
