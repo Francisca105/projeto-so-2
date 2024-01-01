@@ -238,9 +238,9 @@ int ems_list_events(int out_fd) {
   safe_write(out_fd, &ret, sizeof(int));
 
   if (current == NULL) {
-    write(out_fd, &num_events, sizeof(size_t));
-    unsigned int events[num_events];
-    write(out_fd, &events, sizeof(unsigned int[num_events]));
+    safe_write(out_fd, &num_events, sizeof(size_t));
+
+    pthread_rwlock_unlock(&event_list->rwl);
     return 0;
   }
 
