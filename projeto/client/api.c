@@ -130,5 +130,31 @@ int ems_show(int out_fd, unsigned int event_id) {
 
 int ems_list_events(int out_fd) {
   //TODO: send list request to the server (through the request pipe) and wait for the response (through the response pipe)
-  return 1;
+  char code = '6';
+  safe_write(req_pipe_fd, &code, sizeof(code));
+  safe_write(req_pipe_fd, &session, sizeof(int));
+  printf("[Info] Sent list request\n");
+  int res;
+  safe_read(resp_pipe_fd, &res, sizeof(int));
+
+  fprintf(stderr, "[Info] Received list response: %d\n", res);
+  if(res == 1) return res;
+
+  size_t num_events;
+  unsigned int event_ids[num_events];
+  fprintf(stderr, "[Info] Reading list response\n");
+  safe_read(resp_pipe_fd, &num_events, sizeof(size_t));
+  safe_read(resp_pipe_fd, &event_ids, sizeof(unsigned int[num_events]));
+  fprintf(stderr, "[Info] Read list response\n");
+  if(num_events == 0) {
+    print_str(out_fd, "No events\n");
+    return 0;
+  }
+
+  for(size_t i = 0; i < num_events; i++) {
+    print_str(out_fd, "Event: ");
+    print_uint(out_fd, event_ids[i]);
+    print_str(out_fd, "\n");
+  }
+  return 0;
 }

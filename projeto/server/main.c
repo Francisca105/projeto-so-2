@@ -41,7 +41,6 @@ void *worker_thread_func(void *args) {
       int session;
       safe_read(req_pipe_fd, &session, sizeof(int));
 
-
       switch (code) {
           case QUIT_CODE:
             close(req_pipe_fd);
@@ -67,6 +66,14 @@ void *worker_thread_func(void *args) {
             if(res3 == 1) {
               fprintf(stderr, "[ERR] Failed to show event\n");
               safe_write(resp_pipe_fd, &res3, sizeof(int));
+            }
+          break;
+          case LIST_CODE:
+            int res4 = ems_list_events(resp_pipe_fd);
+            
+            if(res4 == 1) {
+              fprintf(stderr, "[ERR] Failed to list events\n");
+              safe_write(resp_pipe_fd, &res4, sizeof(int));
             }
           break;
           case RESERVE_CODE:
