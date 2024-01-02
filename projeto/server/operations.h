@@ -37,4 +37,10 @@ int ems_show(int out_fd, unsigned int event_id);
 /// @return 0 if the events were printed successfully, 1 otherwise.
 int ems_list_events(int out_fd);
 
+/// TODO
+int ems_list_and_show();
+
+/// TODO
+int ems_show1(unsigned int event_id);
+
 #endif  // SERVER_OPERATIONS_H

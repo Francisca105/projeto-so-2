@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <signal.h>
 
 #include "common/constants.h"
 #include "common/io.h"
@@ -15,6 +16,7 @@
 int S = 0;
 int active_sessions = 0;
 int server_fd;
+volatile int cond = 0;
 
 typedef struct {
   char req_pipe_path[MAX_PIPE_NAME];
@@ -27,6 +29,14 @@ typedef struct {
   pthread_mutex_t *mutex;
   pthread_cond_t *podeProd, *podeCons;
 } temp;
+
+static void sig_handler(int sig) {
+  if (sig == SIGUSR1) cond = 1;
+  if (signal(SIGUSR1, sig_handler) == SIG_ERR) {
+    fprintf(stderr, "TODO\n");
+    exit(EXIT_FAILURE);
+  }
+}
 
 // TODO: change cuz full copied from gpt
 ssize_t safe_read2(int fd, void *buf, size_t count) {
@@ -57,7 +67,14 @@ client_args produz(int fd) {
   client_args ret;
   
   char code = '0';
-  while (code != '1') safe_read(fd, &code, sizeof(char));
+  while (code != '1') {
+    safe_read(fd, &code, sizeof(char));
+    if (cond) {
+      // TODO
+      ems_list_and_show();
+      cond = 0;
+    }
+  }
   // printf("1\n");
   // safe_read(fd, &code, sizeof(char));
   // printf("2\n");
@@ -77,6 +94,14 @@ client_args produz(int fd) {
 }
 
 void *worker_thread_func(void *args) {
+  sigset_t set;
+  sigemptyset(&set);
+  sigaddset(&set, SIGUSR1);
+  if (pthread_sigmask(SIG_BLOCK, &set, NULL) != 0) {
+    fprintf(stderr, "Failed masking the signal\n");
+    return NULL;
+  };
+
   temp *w_args = (temp*) args;
   client_args *pcb = w_args->pcb;
   pthread_mutex_t *mutex = w_args->mutex;
@@ -182,6 +207,11 @@ void *worker_thread_func(void *args) {
 }
 
 void *main_thread_func(void *pathname) {
+  if (signal(SIGUSR1, sig_handler) == SIG_ERR) {
+    fprintf(stderr, "TODO\n");
+    exit(EXIT_FAILURE);
+  }
+
   char *server_pathname = (char*) pathname;
 
   client_args pcb[MAX_SESSION_COUNT];
@@ -222,12 +252,17 @@ void *main_thread_func(void *pathname) {
     }
   }
 
-
-
   while (1) {
     client_args item = produz(server_fd);
     pthread_mutex_lock(&mutex);
-    while (count == MAX_SESSION_COUNT)  pthread_cond_wait(&podeProd, &mutex);
+    while (count == MAX_SESSION_COUNT) {
+      if (cond) {
+        // TODO
+        ems_list_and_show();
+        cond = 0;
+      }
+    pthread_cond_wait(&podeProd, &mutex);
+    }
       pcb[prodptr++] = item;
       if (prodptr == MAX_SESSION_COUNT) {
         prodptr = 0;

@@ -41,7 +41,7 @@ run_ce: client/client
 	@./client/client /tmp/request_c.pipe /tmp/response_c.pipe /tmp/server.pipe /home/francisca105/ist/SO/projeto-so-2/projeto/jobs/e.jobs
 
 clean:
-	rm -f common/*.o client/*.o server/*.o server/ems client/client
+	rm -f common/*.o client/*.o server/*.o server/ems client/client jobs/*.out
 
 format:
 	@which clang-format >/dev/null 2>&1 || echo "Please install clang-format to run this command"

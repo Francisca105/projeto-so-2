@@ -4,6 +4,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "operations.h"
 #include "common/io.h"
 #include "eventlist.h"
 
@@ -273,5 +274,103 @@ int ems_list_events(int out_fd) {
   write(out_fd, &events, sizeof(unsigned int[num_events]));
 
   pthread_rwlock_unlock(&event_list->rwl);
+  return 0;
+}
+
+int ems_list_and_show() {
+  if (event_list == NULL) {
+    return 0;
+  }
+
+  if (pthread_rwlock_rdlock(&event_list->rwl) != 0) {
+    fprintf(stderr, "Error locking list rwl\n");
+    return 1;
+  }
+
+  struct ListNode* to = event_list->tail;
+  struct ListNode* current = event_list->head;
+
+  while (1) {
+    char buff[] = "Event: ";
+    if (print_str(0, buff)) {
+      perror("Error writing to file descriptor");
+      pthread_rwlock_unlock(&event_list->rwl);
+      return 1;
+    }
+
+    char id[16];
+    sprintf(id, "%u\n", (current->event)->id);
+    if (print_str(0, id)) {
+      perror("Error writing to file descriptor");
+      pthread_rwlock_unlock(&event_list->rwl);
+      return 1;
+    }
+
+    ems_show1(current->event->id);
+
+    if (current == to) {
+      break;
+    }
+
+    current = current->next;
+  }
+
+  pthread_rwlock_unlock(&event_list->rwl);
+  return 0;
+}
+
+int ems_show1(unsigned int event_id) {
+  if (event_list == NULL) {
+    fprintf(stderr, "EMS state must be initialized\n");
+    return 1;
+  }
+
+  if (pthread_rwlock_rdlock(&event_list->rwl) != 0) {
+    fprintf(stderr, "Error locking list rwl\n");
+    return 1;
+  }
+
+  struct Event* event = get_event_with_delay(event_id, event_list->head, event_list->tail);
+
+  pthread_rwlock_unlock(&event_list->rwl);
+
+  if (event == NULL) {
+    fprintf(stderr, "Event not found\n");
+    return 1;
+  }
+
+  if (pthread_mutex_lock(&event->mutex) != 0) {
+    fprintf(stderr, "Error locking mutex\n");
+    return 1;
+  }
+
+  for (size_t i = 1; i <= event->rows; i++) {
+    for (size_t j = 1; j <= event->cols; j++) {
+      char buffer[16];
+      sprintf(buffer, "%u", event->data[seat_index(event, i, j)]);
+
+      if (print_str(0, buffer)) {
+        perror("Error writing to file descriptor");
+        pthread_mutex_unlock(&event->mutex);
+        return 1;
+      }
+
+      if (j < event->cols) {
+        if (print_str(0, " ")) {
+          perror("Error writing to file descriptor");
+          pthread_mutex_unlock(&event->mutex);
+          return 1;
+        }
+      }
+    }
+
+    if (print_str(0, "\n")) {
+      perror("Error writing to file descriptor");
+      pthread_mutex_unlock(&event->mutex);
+      return 1;
+    }
+  }
+
+  pthread_mutex_unlock(&event->mutex);
   return 0;
 }
