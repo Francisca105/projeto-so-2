@@ -110,10 +110,11 @@ void safe_read(int fd, void *buffer, size_t size) {
   if(r == -1) {
     fprintf(stderr, "[Err]: read failed: %s\n", strerror(errno));
     exit(EXIT_FAILURE);
-  } else if (r == 0) {
-    fprintf(stderr, "[Err]: unexpected end of file\n");
-    exit(EXIT_FAILURE);
   }
+  // } else if (r == 0) {
+  //   fprintf(stderr, "[Err]: unexpected end of file\n");
+  //   exit(EXIT_FAILURE);
+  // }
 }
 
 int safe_open(const char *pathname, int flags) {

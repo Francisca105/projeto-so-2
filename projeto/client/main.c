@@ -116,8 +116,7 @@ int main(int argc, char* argv[]) {
       case EOC:
         close(in_fd);
         close(out_fd);
-        ems_quit();
-        return 0;
+        return ems_quit();
     }
   }
 }
