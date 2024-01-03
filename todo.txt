@@ -1,6 +1,5 @@
 se o cliente morre, o server vai com ele - FIX
 exit após erros de syscalls no server - é suposto ser este o comportamento?
 verifico o SIGUSR1 em dois sitios - FIX
-comentei uma parte de dar close nos pipes - ver isso
 deixar a main sozinha
 organizar o código

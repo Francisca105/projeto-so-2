@@ -17,7 +17,6 @@ char *resp_pipe_p;
 int session;
 
 int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const* server_pipe_path) {
-  //TODO: create pipes and connect to the server
   req_pipe_p = req_pipe_path;
   resp_pipe_p = resp_pipe_path;
 
@@ -27,7 +26,14 @@ int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const*
   // Server pipe
   server_fd = safe_open(server_pipe_path, O_WRONLY);
   
-  char code = '1';
+  char code = '1'; // TODO: Deve ser num unico write?
+  
+  // char buffer[MAX_PIPE_NAME + MAX_PIPE_NAME + 2];
+  // memcpy(buffer, code, 1);
+  // memcpy(buffer + 1, req_pipe_path, MAX_PIPE_NAME);
+  // memcpy(buffer + 1 + MAX_PIPE_NAME, resp_pipe_path, MAX_PIPE_NAME);
+  // print_str(server_fd, buffer);
+  
   safe_write(server_fd, &code, sizeof(code));
   safe_write(server_fd, req_pipe_path, MAX_PIPE_NAME);
   safe_write(server_fd, resp_pipe_path, MAX_PIPE_NAME);
@@ -44,7 +50,6 @@ int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const*
 }
 
 int ems_quit(void) { 
-  //TODO: close pipes
   char code = '2';
   safe_write(req_pipe_fd, &code, sizeof(code));
   safe_write(req_pipe_fd, &session, sizeof(int));
@@ -60,7 +65,6 @@ int ems_quit(void) {
 }
 
 int ems_create(unsigned int event_id, size_t num_rows, size_t num_cols) {
-  //TODO: send create request to the server (through the request pipe) and wait for the response (through the response pipe)
   char code = '3';
   safe_write(req_pipe_fd, &code, sizeof(code));
   safe_write(req_pipe_fd, &session, sizeof(int));
@@ -74,7 +78,6 @@ int ems_create(unsigned int event_id, size_t num_rows, size_t num_cols) {
 }
 
 int ems_reserve(unsigned int event_id, size_t num_seats, size_t* xs, size_t* ys) {
-  //TODO: send reserve request to the server (through the request pipe) and wait for the response (through the response pipe)
   char code = '4';
   safe_write(req_pipe_fd, &code, sizeof(code));
   safe_write(req_pipe_fd, &session, sizeof(int));
@@ -89,7 +92,6 @@ int ems_reserve(unsigned int event_id, size_t num_seats, size_t* xs, size_t* ys)
 }
 
 int ems_show(int out_fd, unsigned int event_id) {
-  //TODO: send show request to the server (through the request pipe) and wait for the response (through the response pipe)
   char code = '5';
   safe_write(req_pipe_fd, &code, sizeof(code));
   safe_write(req_pipe_fd, &session, sizeof(int));
@@ -108,8 +110,6 @@ int ems_show(int out_fd, unsigned int event_id) {
 
   unsigned int seats[num_rows*num_cols];
   safe_read(resp_pipe_fd, &seats, sizeof(unsigned int[num_rows*num_cols]));
-
-  // safe_write(out_fd, &res, sizeof(int));
 
   char newline = '\n';
   char space = ' ';

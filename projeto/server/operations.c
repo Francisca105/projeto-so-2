@@ -306,7 +306,7 @@ int ems_list_and_show() {
       return 1;
     }
 
-    ems_show1(current->event->id);
+    ems_show_base(current->event->id);
 
     if (current == to) {
       break;
@@ -319,7 +319,7 @@ int ems_list_and_show() {
   return 0;
 }
 
-int ems_show1(unsigned int event_id) {
+int ems_show_base(unsigned int event_id) {
   if (event_list == NULL) {
     fprintf(stderr, "EMS state must be initialized\n");
     return 1;
@@ -349,14 +349,14 @@ int ems_show1(unsigned int event_id) {
       char buffer[16];
       sprintf(buffer, "%u", event->data[seat_index(event, i, j)]);
 
-      if (print_str(0, buffer)) {
+      if (print_str(1, buffer)) {
         perror("Error writing to file descriptor");
         pthread_mutex_unlock(&event->mutex);
         return 1;
       }
 
       if (j < event->cols) {
-        if (print_str(0, " ")) {
+        if (print_str(1, " ")) {
           perror("Error writing to file descriptor");
           pthread_mutex_unlock(&event->mutex);
           return 1;
@@ -364,7 +364,7 @@ int ems_show1(unsigned int event_id) {
       }
     }
 
-    if (print_str(0, "\n")) {
+    if (print_str(1, "\n")) {
       perror("Error writing to file descriptor");
       pthread_mutex_unlock(&event->mutex);
       return 1;

@@ -31,7 +31,7 @@ typedef struct {
 void sig_handler(int sig) {
   if (sig == SIGUSR1) {
     if (signal(SIGUSR1, sig_handler) == SIG_ERR) {
-      exit(EXIT_FAILURE); // TODO: verificar se é o comportamento esperado
+      exit(EXIT_FAILURE);
     }
     cond = 1;
   }
@@ -66,14 +66,10 @@ client_args produz(int fd) {
   client_args ret;
   
   char code = '0';
-  while (code != '1') {
-    safe_read(fd, &code, sizeof(char));
-    if (cond) {
-      // TODO
-      ems_list_and_show();
-      cond = 0;
-    }
-  }
+
+  printf("1\n");
+  safe_read(fd, &code, sizeof(char));
+  printf("2\n");
   
   char req_pipe_path[MAX_PIPE_NAME];
   char resp_pipe_path[MAX_PIPE_NAME];
@@ -194,8 +190,8 @@ void *worker_thread_func(void *args) {
     } while (code != QUIT_CODE);
 
     fprintf(stderr, "[Info] Worker thread ended\n");
-    // close(req_pipe_fd);
-    // close(resp_pipe_fd);
+    close(req_pipe_fd);
+    close(resp_pipe_fd);
   }
 
   return NULL;
@@ -204,7 +200,7 @@ void *worker_thread_func(void *args) {
 void *main_thread_func(void *string) {
   if (signal(SIGUSR1, sig_handler) == SIG_ERR) {
     fprintf(stderr, "Failed to change how SIGUSR1 is handled\n");
-    pthread_exit((void*)1); // TODO: verificar se é o comportamento esperado
+    pthread_exit((void*)1);
   }
 
   char *server_pathname = (char*) string;
@@ -218,37 +214,38 @@ void *main_thread_func(void *string) {
   pthread_mutex_t mutex;
   if (pthread_mutex_init(&mutex, NULL) != 0) {
     fprintf(stderr, "Failed do initialize mutex\n");
-    pthread_exit((void*)1); // TODO: verificar se é o comportamento esperado
+    pthread_exit((void*)1);
   }
   pthread_cond_t podeProd;
   if (pthread_cond_init(&podeProd, NULL) != 0) {
     fprintf(stderr, "Failed do initialize conditional variable\n");
-    pthread_exit((void*)1); // TODO: verificar se é o comportamento esperado
+    pthread_exit((void*)1);
   }
   pthread_cond_t podeCons;
   if (pthread_cond_init(&podeCons, NULL) != 0) {
     fprintf(stderr, "Failed do initialize conditional variable\n");
-    pthread_exit((void*)1); // TODO: verificar se é o comportamento esperado
+    pthread_exit((void*)1);
   }
 
   open_pipe(server_pathname, SERVER_PIPE_MODE);
-  int server_fd = safe_open(server_pathname, O_RDONLY);
+  // opened pipe for rdwr to avoid the closing of the pipe
+  int server_fd = safe_open(server_pathname, O_RDWR);
 
   pthread_t worker_threads[MAX_SESSION_COUNT];
 
   for (int i = 0; i < MAX_SESSION_COUNT; i++) {
     temp *args = (temp*) safe_malloc(sizeof(temp));
-    arg->prodConsBuf = prodConsBuf;
-    arg->consptr = &consptr;
-    arg->prodptr = &prodptr;
-    arg->active_sessions = &active_sessions;
-    arg->session_id = i;
-    arg->mutex = &mutex;
-    arg->podeCons = &podeCons;
-    arg->podeProd = &podeProd;
+    args->prodConsBuf = prodConsBuf;
+    args->consptr = &consptr;
+    args->prodptr = &prodptr;
+    args->active_sessions = &active_sessions;
+    args->session_id = i;
+    args->mutex = &mutex;
+    args->podeCons = &podeCons;
+    args->podeProd = &podeProd;
     if (pthread_create(&worker_threads[i], NULL, worker_thread_func, args) != 0) {
       fprintf(stderr, "Failed to create worker thread\n");
-      pthread_exit((void*)1); // TODO: verificar se é o comportamento esperado
+      pthread_exit((void*)1);
     }
   }
 
@@ -271,7 +268,7 @@ void *main_thread_func(void *string) {
     pthread_mutex_unlock(&mutex);
   }
   
-  pthread_exit((void*)0); // TODO: verificar se é válido
+  pthread_exit((void*)0);
 }
 
 int main(int argc, char* argv[]) {
@@ -301,22 +298,19 @@ int main(int argc, char* argv[]) {
   char server_pathname[MAX_PIPE_NAME];
   strncpy(server_pathname, argv[1], MAX_PIPE_NAME);
   
-  pthread_t main_thread;
-  if (pthread_create(&main_thread, NULL, main_thread_func, server_pathname) != 0) {
+  pthread_t server;
+  if (pthread_create(&server, NULL, main_thread_func, server_pathname) != 0) {
     fprintf(stderr, "Failed to create main thread\n");
-    return 1; // TODO: verificar se é o comportamento esperado
+    return 1;
   } 
   
   void *ret;
-  if (pthread_join(main_thread, &ret) != 0) {
-    fprintf(stderr, "Failed to join main thread\n");
-    return 1; // TODO: verificar se é o comportamento esperado
-  } else if (*(int*) ret != 0) { // TODO: nunca chegará aqui por isso tiramos isto (?)
-    fprintf(stdin, "Main thread exited prematurely\n");
+  if (pthread_join(server, &ret) != 0) {
+    fprintf(stderr, "Failed to join server\n");
+    return 1;
+  } else if (*(int*) ret != 0) {
+    fprintf(stdin, "Server exited prematurely\n");
   }
-
-  // Q: é suposto fazer alguma coisa em relação a fechar o server?
-  // https://piazza.com/class/lo7cxxgl10n34l/post/105 - resposta do stor Paolo
 
   return ems_terminate();
 }
