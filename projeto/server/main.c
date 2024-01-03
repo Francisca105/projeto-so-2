@@ -1,6 +1,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <pthread.h>
 #include <string.h>
 #include <fcntl.h>
@@ -13,9 +14,6 @@
 #include "common/io.h"
 #include "operations.h"
 
-int S = 0;
-int active_sessions = 0;
-int server_fd;
 volatile int cond = 0;
 
 typedef struct {
@@ -24,17 +22,18 @@ typedef struct {
 } client_args;
 
 typedef struct {
-  client_args* pcb;
-  int *prodptr, *consptr, *count;
+  client_args* prodConsBuf;
+  int *prodptr, *consptr, *active_sessions, session_id;
   pthread_mutex_t *mutex;
   pthread_cond_t *podeProd, *podeCons;
 } temp;
 
-static void sig_handler(int sig) {
-  if (sig == SIGUSR1) cond = 1;
-  if (signal(SIGUSR1, sig_handler) == SIG_ERR) {
-    fprintf(stderr, "TODO\n");
-    exit(EXIT_FAILURE);
+void sig_handler(int sig) {
+  if (sig == SIGUSR1) {
+    if (signal(SIGUSR1, sig_handler) == SIG_ERR) {
+      exit(EXIT_FAILURE); // TODO: verificar se é o comportamento esperado
+    }
+    cond = 1;
   }
 }
 
@@ -75,9 +74,6 @@ client_args produz(int fd) {
       cond = 0;
     }
   }
-  // printf("1\n");
-  // safe_read(fd, &code, sizeof(char));
-  // printf("2\n");
   
   char req_pipe_path[MAX_PIPE_NAME];
   char resp_pipe_path[MAX_PIPE_NAME];
@@ -103,25 +99,25 @@ void *worker_thread_func(void *args) {
   };
 
   temp *w_args = (temp*) args;
-  client_args *pcb = w_args->pcb;
+  client_args *prodConsBuf = w_args->prodConsBuf;
   pthread_mutex_t *mutex = w_args->mutex;
   pthread_cond_t *podeCons = w_args->podeCons;
   pthread_cond_t *podeProd = w_args->podeProd;
   int *consptr = w_args->consptr;
-  int *count = w_args->count;
+  int *active_sessions = w_args->active_sessions;
+  int session_id = w_args->session_id;
 
-  S++;
 
   client_args c_args;
   while (1) {
     pthread_mutex_lock(mutex);
-    while (*count == 0) pthread_cond_wait(podeCons,mutex);
-    c_args = pcb[*consptr];
+    while (*active_sessions == 0) pthread_cond_wait(podeCons,mutex);
+    c_args = prodConsBuf[*consptr];
     (*consptr)++;
     if (*consptr == MAX_SESSION_COUNT) {
       *consptr = 0;
     }
-    (*count)--;
+    (*active_sessions)--;
     pthread_cond_signal(podeProd);
     pthread_mutex_unlock(mutex);
 
@@ -133,8 +129,7 @@ void *worker_thread_func(void *args) {
 
     fprintf(stderr, "[INFO] Worker thread started\n");
 
-    S++;
-    safe_write(resp_pipe_fd, &S, sizeof(int));
+    safe_write(resp_pipe_fd, &session_id, sizeof(int));
 
     char code;
 
@@ -206,73 +201,77 @@ void *worker_thread_func(void *args) {
   return NULL;
 }
 
-void *main_thread_func(void *pathname) {
+void *main_thread_func(void *string) {
   if (signal(SIGUSR1, sig_handler) == SIG_ERR) {
-    fprintf(stderr, "TODO\n");
-    exit(EXIT_FAILURE);
+    fprintf(stderr, "Failed to change how SIGUSR1 is handled\n");
+    pthread_exit((void*)1); // TODO: verificar se é o comportamento esperado
   }
 
-  char *server_pathname = (char*) pathname;
+  char *server_pathname = (char*) string;
 
-  client_args pcb[MAX_SESSION_COUNT];
-  memset(pcb, 0, sizeof(pcb));
-  int prodptr = 0, consptr = 0, count = 0;
+  // producer-consumer buffer
+  client_args prodConsBuf[MAX_SESSION_COUNT];
+  memset(prodConsBuf, 0, sizeof(prodConsBuf));
+
+  int prodptr = 0, consptr = 0, active_sessions = 0;
+
   pthread_mutex_t mutex;
   if (pthread_mutex_init(&mutex, NULL) != 0) {
     fprintf(stderr, "Failed do initialize mutex\n");
-    return NULL;
+    pthread_exit((void*)1); // TODO: verificar se é o comportamento esperado
   }
-  pthread_cond_t podeProd, podeCons;
+  pthread_cond_t podeProd;
   if (pthread_cond_init(&podeProd, NULL) != 0) {
     fprintf(stderr, "Failed do initialize conditional variable\n");
-    return NULL;
+    pthread_exit((void*)1); // TODO: verificar se é o comportamento esperado
   }
+  pthread_cond_t podeCons;
   if (pthread_cond_init(&podeCons, NULL) != 0) {
     fprintf(stderr, "Failed do initialize conditional variable\n");
-    return NULL;
+    pthread_exit((void*)1); // TODO: verificar se é o comportamento esperado
   }
 
   open_pipe(server_pathname, SERVER_PIPE_MODE);
-  server_fd = safe_open(server_pathname, O_RDONLY);
+  int server_fd = safe_open(server_pathname, O_RDONLY);
 
   pthread_t worker_threads[MAX_SESSION_COUNT];
 
   for (int i = 0; i < MAX_SESSION_COUNT; i++) {
-    temp *arg = (temp*) safe_malloc(sizeof(temp));
-    arg->pcb = pcb;
+    temp *args = (temp*) safe_malloc(sizeof(temp));
+    arg->prodConsBuf = prodConsBuf;
     arg->consptr = &consptr;
     arg->prodptr = &prodptr;
-    arg->count = &count;
+    arg->active_sessions = &active_sessions;
+    arg->session_id = i;
     arg->mutex = &mutex;
     arg->podeCons = &podeCons;
     arg->podeProd = &podeProd;
-    if (pthread_create(&worker_threads[i], NULL, worker_thread_func, arg) != 0) {
-      fprintf(stderr, "Failed to create worker thread\n"); // TODO: verificar se é o comportamento esperado
-      return NULL;
+    if (pthread_create(&worker_threads[i], NULL, worker_thread_func, args) != 0) {
+      fprintf(stderr, "Failed to create worker thread\n");
+      pthread_exit((void*)1); // TODO: verificar se é o comportamento esperado
     }
   }
 
   while (1) {
     client_args item = produz(server_fd);
     pthread_mutex_lock(&mutex);
-    while (count == MAX_SESSION_COUNT) {
+    while (active_sessions == MAX_SESSION_COUNT) {
       if (cond) {
-        // TODO
         ems_list_and_show();
         cond = 0;
       }
     pthread_cond_wait(&podeProd, &mutex);
     }
-      pcb[prodptr++] = item;
-      if (prodptr == MAX_SESSION_COUNT) {
-        prodptr = 0;
-      }
-      count++;
-      pthread_cond_signal(&podeCons);
-      pthread_mutex_unlock(&mutex);
+    prodConsBuf[prodptr++] = item;
+    if (prodptr == MAX_SESSION_COUNT) {
+      prodptr = 0;
+    }
+    active_sessions++;
+    pthread_cond_signal(&podeCons);
+    pthread_mutex_unlock(&mutex);
   }
   
-  return NULL;
+  pthread_exit((void*)0); // TODO: verificar se é válido
 }
 
 int main(int argc, char* argv[]) {
@@ -300,26 +299,24 @@ int main(int argc, char* argv[]) {
   }
 
   char server_pathname[MAX_PIPE_NAME];
-  strncpy(server_pathname, argv[1], sizeof(server_pathname));
+  strncpy(server_pathname, argv[1], MAX_PIPE_NAME);
   
   pthread_t main_thread;
   if (pthread_create(&main_thread, NULL, main_thread_func, server_pathname) != 0) {
     fprintf(stderr, "Failed to create main thread\n");
-    return 1;
+    return 1; // TODO: verificar se é o comportamento esperado
   } 
   
-  // void *ret_value; TODO
-  if (pthread_join(main_thread, NULL) != 0) {
+  void *ret;
+  if (pthread_join(main_thread, &ret) != 0) {
     fprintf(stderr, "Failed to join main thread\n");
-    return 1;
+    return 1; // TODO: verificar se é o comportamento esperado
+  } else if (*(int*) ret != 0) { // TODO: nunca chegará aqui por isso tiramos isto (?)
+    fprintf(stdin, "Main thread exited prematurely\n");
   }
 
-  // while (1) {
-    // TODO: Read from pipe
-    // TODO: Write new client to the producer-consumer buffer
-  // }
-
-  //TODO: Close Server
+  // Q: é suposto fazer alguma coisa em relação a fechar o server?
+  // https://piazza.com/class/lo7cxxgl10n34l/post/105 - resposta do stor Paolo
 
   return ems_terminate();
 }
