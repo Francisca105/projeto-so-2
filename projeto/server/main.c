@@ -137,11 +137,12 @@ void *worker_thread_func(void *args) {
         safe_read(req_pipe_fd, &session, sizeof(int));
 
         switch (code) {
-            case QUIT_CODE:
+            case QUIT_CODE: {
               close(req_pipe_fd);
               close(resp_pipe_fd);
               break;
-            case CREATE_CODE:
+            }
+            case CREATE_CODE: {
               unsigned int event_id_c;
               size_t num_rows;
               size_t num_cols;
@@ -153,7 +154,8 @@ void *worker_thread_func(void *args) {
               int res = ems_create(event_id_c, num_rows, num_cols);
               safe_write(resp_pipe_fd, &res, sizeof(int));
               break;
-            case SHOW_CODE:
+            }
+            case SHOW_CODE: {
               unsigned int event_id_s;
               safe_read(req_pipe_fd, &event_id_s, sizeof(unsigned int));
               
@@ -163,7 +165,8 @@ void *worker_thread_func(void *args) {
                 safe_write(resp_pipe_fd, &res3, sizeof(int));
               }
               break;
-            case LIST_CODE:
+            }
+            case LIST_CODE: {
               int res4 = ems_list_events(resp_pipe_fd);
               
               if(res4 == 1) {
@@ -171,7 +174,8 @@ void *worker_thread_func(void *args) {
                 safe_write(resp_pipe_fd, &res4, sizeof(int));
               }
               break;
-            case RESERVE_CODE:
+            }
+            case RESERVE_CODE: {
               fprintf(stderr, "[INFO] Reserving seats\n");
               unsigned int event_id_r;
               size_t num_seats;
@@ -188,6 +192,7 @@ void *worker_thread_func(void *args) {
               int res2 = ems_reserve(event_id_r, num_seats, xs, ys);
               safe_write(resp_pipe_fd, &res2, sizeof(int));
               break;
+            }
         }
     } while (code != QUIT_CODE);
 
