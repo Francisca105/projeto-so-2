@@ -1,6 +1,2 @@
 se o cliente morre, o server vai com ele - FIX
-exit após erros de syscalls no server - é suposto ser este o comportamento?
-deixar a main sozinha
-organizar o código
-retorno do código base do server para o cliente
-"No events" e coisas do género
+vou tirar os exit do server, a partir do momento que há um erro ficamos com deus

@@ -6,6 +6,7 @@
 #include "api.h"
 #include "common/constants.h"
 #include "parser.h"
+#include "common/io.h"
 
 int main(int argc, char* argv[]) {
   if (argc < 5) {
@@ -114,8 +115,8 @@ int main(int argc, char* argv[]) {
         break;
 
       case EOC:
-        close(in_fd);
-        close(out_fd);
+        safe_close(in_fd);
+        safe_close(out_fd);
         return ems_quit();
     }
   }

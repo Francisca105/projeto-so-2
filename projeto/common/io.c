@@ -103,12 +103,12 @@ void safe_read(int fd, void *buf, size_t size) {
     if (bytes_read < 1) {
       if (bytes_read == 0) {
         fprintf(stderr, "[ERR]: Unexpected end of file\n");
-        exit(EXIT_FAILURE);
+        // exit(EXIT_FAILURE);
       } else if (errno == EINTR) {
         continue;
       } else {
         fprintf(stderr, "[ERR]: read failed: %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
+        // exit(EXIT_FAILURE);
       }
     }
   } while (bytes_read == -1);
@@ -119,7 +119,7 @@ void safe_write(int fd, const void *buf, size_t size) {
     ssize_t bytes_written = write(fd, buf, size);
     if (bytes_written == -1) {
       fprintf(stderr, "[ERR]: write failed: %s\n", strerror(errno));
-      exit(EXIT_FAILURE);
+      // exit(EXIT_FAILURE);
     }
 
     size -= (size_t)bytes_written;
@@ -131,7 +131,7 @@ int safe_open(const char *pathname, int flags) {
 
   if (fd == -1) {
     fprintf(stderr, "[Err]: open failed: %s\n", strerror(errno));
-    exit(EXIT_FAILURE);
+    // exit(EXIT_FAILURE);
   }
 
   return fd;
@@ -140,7 +140,7 @@ int safe_open(const char *pathname, int flags) {
 void safe_close(int fd) {
   if (close(fd) == -1) {
     fprintf(stderr, "[ERR]: close failed: %s\n", strerror(errno));
-    exit(EXIT_FAILURE);
+    // exit(EXIT_FAILURE);
   }
 }
 
@@ -149,15 +149,15 @@ void open_pipe(const char *pathname, mode_t mode) {
 
   if (mkfifo(pathname, mode) != 0) {
     fprintf(stderr, "[ERR]: mkfifo failed: %s\n", strerror(errno));
-    exit(EXIT_FAILURE);
+    // exit(EXIT_FAILURE);
   }
 
-  fprintf(stdout, "[Info]: Pipe %s created\n", pathname);
+  fprintf(stdout, "[INFO]: Pipe %s created\n", pathname);
 }
 
 void safe_unlink(const char *pathname) {
   if (unlink(pathname) != 0 && errno != ENOENT) {
     fprintf(stderr, "[ERR]: unlink(%s) failed: %s\n", pathname, strerror(errno));
-    exit(EXIT_FAILURE);
+    // exit(EXIT_FAILURE);
   }
 }

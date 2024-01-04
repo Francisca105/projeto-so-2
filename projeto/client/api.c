@@ -40,7 +40,7 @@ int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const*
   resp_pipe_fd = safe_open(resp_pipe_path, O_RDONLY);
   
   safe_read(resp_pipe_fd, &session_id, sizeof(int));
-  fprintf(stdout, "[Info]: New session with id %d\n", session_id);
+  fprintf(stdout, "[INFO]: New session with id %d\n", session_id);
 
   return 0;
 }
@@ -53,9 +53,9 @@ int ems_quit(void) {
   safe_close(req_pipe_fd);
   safe_close(resp_pipe_fd);
 
-  // safe_unlink(req_pipe_p);
-  // safe_unlink(resp_pipe_p);
-  printf("[Info]: Closed session_id %d pipes\n", session_id);
+  safe_unlink(req_pipe_p);
+  safe_unlink(resp_pipe_p);
+  printf("[INFO]: Closed session_id %d pipes\n", session_id);
 
   return 0;
 }
