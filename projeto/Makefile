@@ -23,9 +23,6 @@ client/client: common/io.o client/main.c client/api.o client/parser.o
 %.o: %.c %.h
 	$(CC) $(CFLAGS) -c ${@:.o=.c} -o $@
 
-run: server/ems
-	@./server/ems
-
 run_s: server/ems
 	@./server/ems /tmp/server.pipe
 

@@ -38,6 +38,7 @@ int ems_show(int out_fd, unsigned int event_id);
 int ems_list_events(int out_fd);
 
 /// Prints all the events and their reservations.
+/// @return 0 if the events were printed successfully, 1 otherwise.
 int ems_list_and_show();
 
 /// ems_show from base_code.

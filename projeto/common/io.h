@@ -22,17 +22,17 @@ int print_uint(int fd, unsigned int value);
 /// @return 0 if the string was written successfully, 1 otherwise.
 int print_str(int fd, const char *str);
 
-/// Reads something from the given file descriptor.
+/// Safely reads something from the given file descriptor.
 /// @param fd The file descriptor to read from.
-/// @param buffer Pointer to the variable to store the string in.
+/// @param buf Pointer to the variable to store the string in.
 /// @param size The maximum number of bytes to read.
-void safe_read(int fd, void *buffer, size_t size);
+void safe_read(int fd, void *buf, size_t size);
 
-/// Writes something to the given file descriptor.
+/// Safely writes something to the given file descriptor.
 /// @param fd The file descriptor to write to.
-/// @param buffer Pointer to the variable to read the string from.
+/// @param buf Pointer to the variable to read the string from.
 /// @param size The number of bytes to write.
-void safe_write(int fd, void *buffer, size_t size);
+void safe_write(int fd, const void *buf, size_t size);
 
 /// Creates a malloc with error checking.
 /// @param size 
@@ -45,12 +45,17 @@ void *safe_malloc(size_t size);
 /// @return fd
 int safe_open(const char *pathname, int flags);
 
+/// Safely closes a file.
+/// @param fd 
+void safe_close(int fd);
+
 /// Safely opens a pipe.
 /// @param pathname
 /// @param mode
 void open_pipe(const char *pathname, mode_t mode);
 
-/// Safely closes a pipe.
+/// Safely unlink a file.
 /// @param pathname
-void close_pipe(const char *pathname);
+void safe_unlink(const char *pathname);
+
 #endif  // COMMON_IO_H

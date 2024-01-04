@@ -86,61 +86,78 @@ int print_str(int fd, const char *str) {
   return 0;
 }
 
-// Begin of the changes 
-
 void *safe_malloc(size_t size) {
   void *ptr = malloc(size);
   if (ptr == NULL) {
-    fprintf(stderr, "Failed to allocate memory\n");
-    exit(1);
+    fprintf(stderr, "[ERR]: Failed to allocate memory\n");
+    exit(EXIT_FAILURE);
   }
   return ptr;
 }
 
-void safe_write(int fd, void *buffer, size_t size) {
-  if(write(fd, buffer, size) == -1) {
-    fprintf(stderr, "[ERR]: write failed: %s\n", strerror(errno));
-    exit(EXIT_FAILURE);
-  }
+void safe_read(int fd, void *buf, size_t size) {
+  ssize_t bytes_read;
+
+  do {
+    bytes_read = read(fd, buf, size);
+    if (bytes_read < 1) {
+      if (bytes_read == 0) {
+        fprintf(stderr, "[ERR]: Unexpected end of file\n");
+        exit(EXIT_FAILURE);
+      } else if (errno == EINTR) {
+        continue;
+      } else {
+        fprintf(stderr, "[ERR]: read failed: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+      }
+    }
+  } while (bytes_read == -1);
 }
 
-void safe_read(int fd, void *buffer, size_t size) {
-  ssize_t r = read(fd, buffer, size);
+void safe_write(int fd, const void *buf, size_t size) {
+  do {
+    ssize_t bytes_written = write(fd, buf, size);
+    if (bytes_written == -1) {
+      fprintf(stderr, "[ERR]: write failed: %s\n", strerror(errno));
+      exit(EXIT_FAILURE);
+    }
 
-  if(r == -1) {
-    fprintf(stderr, "[Err]: read failed: %s\n", strerror(errno));
-    exit(EXIT_FAILURE);
-  } else if (r == 0) {
-    fprintf(stderr, "[Err]: unexpected end of file\n");
-    exit(EXIT_FAILURE);
-  }
+    size -= (size_t)bytes_written;
+  } while (size > 0);
 }
 
 int safe_open(const char *pathname, int flags) {
   int fd = open(pathname, flags);
 
-  if(fd == -1) {
-    fprintf(stderr, "[Err]: open failed: %s\n",(errno));
+  if (fd == -1) {
+    fprintf(stderr, "[Err]: open failed: %s\n", strerror(errno));
     exit(EXIT_FAILURE);
   }
 
   return fd;
 }
 
-void close_pipe(const char *pathname) {
-  if (unlink(pathname) != 0 && errno != ENOENT) {
-    fprintf(stderr, "unlink(%s) failed: %s\n", pathname, strerror(errno));
+void safe_close(int fd) {
+  if (close(fd) == -1) {
+    fprintf(stderr, "[ERR]: close failed: %s\n", strerror(errno));
     exit(EXIT_FAILURE);
   }
 }
 
 void open_pipe(const char *pathname, mode_t mode) {
-  close_pipe(pathname);
+  safe_unlink(pathname);
 
   if (mkfifo(pathname, mode) != 0) {
-    fprintf(stderr, "mkfifo failed: %s\n", strerror(errno));
+    fprintf(stderr, "[ERR]: mkfifo failed: %s\n", strerror(errno));
     exit(EXIT_FAILURE);
   }
 
-  fprintf(stderr, "Pipe %s created\n", pathname);
+  fprintf(stdout, "[Info]: Pipe %s created\n", pathname);
+}
+
+void safe_unlink(const char *pathname) {
+  if (unlink(pathname) != 0 && errno != ENOENT) {
+    fprintf(stderr, "[ERR]: unlink(%s) failed: %s\n", pathname, strerror(errno));
+    exit(EXIT_FAILURE);
+  }
 }

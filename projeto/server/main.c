@@ -17,8 +17,8 @@
 volatile int cond = 0;
 
 typedef struct {
-  char req_pipe_path[MAX_PIPE_NAME];
-  char resp_pipe_path[MAX_PIPE_NAME];
+  char req_pipe_path[PIPE_NAME_SIZE];
+  char resp_pipe_path[PIPE_NAME_SIZE];
 } client_args;
 
 typedef struct {
@@ -65,22 +65,24 @@ ssize_t safe_read2(int fd, void *buf, size_t count) {
 client_args produz(int fd) {
   client_args ret;
   
-  char code = '0';
-
-  printf("1\n");
+  char code;
   safe_read(fd, &code, sizeof(char));
-  printf("2\n");
-  
-  char req_pipe_path[MAX_PIPE_NAME];
-  char resp_pipe_path[MAX_PIPE_NAME];
 
-  safe_read2(fd, req_pipe_path, MAX_PIPE_NAME);
-  safe_read2(fd, resp_pipe_path, MAX_PIPE_NAME);
+  if (cond) {
+    ems_list_and_show();
+    cond = 0;
+  }
+  
+  char req_pipe_path[PIPE_NAME_SIZE];
+  char resp_pipe_path[PIPE_NAME_SIZE];
+
+  safe_read2(fd, req_pipe_path, PIPE_NAME_SIZE);
+  safe_read2(fd, resp_pipe_path, PIPE_NAME_SIZE);
   fprintf(stderr, "Request pipe: %s\n", req_pipe_path);
   fprintf(stderr, "Response pipe: %s\n", resp_pipe_path);
 
-  strncpy(ret.req_pipe_path, req_pipe_path, MAX_PIPE_NAME);
-  strncpy(ret.resp_pipe_path, resp_pipe_path, MAX_PIPE_NAME);
+  strncpy(ret.req_pipe_path, req_pipe_path, PIPE_NAME_SIZE);
+  strncpy(ret.resp_pipe_path, resp_pipe_path, PIPE_NAME_SIZE);
 
   return ret;
 }
@@ -227,7 +229,7 @@ void *main_thread_func(void *string) {
     pthread_exit((void*)1);
   }
 
-  open_pipe(server_pathname, SERVER_PIPE_MODE);
+  open_pipe(server_pathname, PIPE_PERMS);
   // opened pipe for rdwr to avoid the closing of the pipe
   int server_fd = safe_open(server_pathname, O_RDWR);
 
@@ -295,8 +297,8 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  char server_pathname[MAX_PIPE_NAME];
-  strncpy(server_pathname, argv[1], MAX_PIPE_NAME);
+  char server_pathname[PIPE_PERMS];
+  strncpy(server_pathname, argv[1], PIPE_NAME_SIZE);
   
   pthread_t server;
   if (pthread_create(&server, NULL, main_thread_func, server_pathname) != 0) {
