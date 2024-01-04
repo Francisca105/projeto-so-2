@@ -43,7 +43,6 @@ int ems_list_and_show();
 
 /// ems_show from base_code.
 /// Prints the given event.
-/// @param out_fd File descriptor to print the event to.
 /// @param event_id Id of the event to print.
 /// @return 0 if the event was printed successfully, 1 otherwise.
 int ems_show_base(unsigned int event_id);

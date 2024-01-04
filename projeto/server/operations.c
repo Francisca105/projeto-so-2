@@ -10,6 +10,7 @@
 
 static struct EventList* event_list = NULL;
 static unsigned int state_access_delay_us = 0;
+static size_t num_events;
 
 /// Gets the event with the given ID from the state.
 /// @note Will wait to simulate a real system accessing a costly memory resource.
@@ -112,6 +113,7 @@ int ems_create(unsigned int event_id, size_t num_rows, size_t num_cols) {
   }
 
   pthread_rwlock_unlock(&event_list->rwl);
+  num_events++;
   return 0;
 }
 
@@ -231,11 +233,9 @@ int ems_list_events(int out_fd) {
     return 1;
   }
 
-  struct ListNode* to = event_list->tail;
   struct ListNode* current = event_list->head;
 
   int ret = 0;
-  size_t num_events = 0;
   safe_write(out_fd, &ret, sizeof(int));
 
   if (current == NULL) {
@@ -243,35 +243,16 @@ int ems_list_events(int out_fd) {
 
     pthread_rwlock_unlock(&event_list->rwl);
     return 0;
-  }
-
-  while (1) { // TODO: improve this
-    num_events++;
-    if (current == to) {
-      break;
-    }
-
-    current = current->next;
-  }
-  
-  current = event_list->head;
-
-  write(out_fd, &num_events, sizeof(size_t));
+  }  
+  safe_write(out_fd, &num_events, sizeof(size_t));
   unsigned int events[num_events];
-  int i = 0;
 
-  while(1) {
+  for (size_t i = 0; i < num_events; i++) {
     events[i] = (current->event)->id;
-    i++;
-
-    if (current == to) {
-      break;
-    }
-
     current = current->next;
   }
 
-  write(out_fd, &events, sizeof(unsigned int[num_events]));
+  safe_write(out_fd, &events, sizeof(unsigned int[num_events]));
 
   pthread_rwlock_unlock(&event_list->rwl);
   return 0;
@@ -292,7 +273,7 @@ int ems_list_and_show() {
 
   while (1) {
     char buff[] = "Event: ";
-    if (print_str(0, buff)) {
+    if (print_str(STDOUT_FILENO, buff)) {
       perror("Error writing to file descriptor");
       pthread_rwlock_unlock(&event_list->rwl);
       return 1;
@@ -300,7 +281,7 @@ int ems_list_and_show() {
 
     char id[16];
     sprintf(id, "%u\n", (current->event)->id);
-    if (print_str(0, id)) {
+    if (print_str(STDOUT_FILENO, id)) {
       perror("Error writing to file descriptor");
       pthread_rwlock_unlock(&event_list->rwl);
       return 1;
@@ -349,14 +330,14 @@ int ems_show_base(unsigned int event_id) {
       char buffer[16];
       sprintf(buffer, "%u", event->data[seat_index(event, i, j)]);
 
-      if (print_str(1, buffer)) {
+      if (print_str(STDOUT_FILENO, buffer)) {
         perror("Error writing to file descriptor");
         pthread_mutex_unlock(&event->mutex);
         return 1;
       }
 
       if (j < event->cols) {
-        if (print_str(1, " ")) {
+        if (print_str(STDOUT_FILENO, " ")) {
           perror("Error writing to file descriptor");
           pthread_mutex_unlock(&event->mutex);
           return 1;
@@ -364,7 +345,7 @@ int ems_show_base(unsigned int event_id) {
       }
     }
 
-    if (print_str(1, "\n")) {
+    if (print_str(STDOUT_FILENO, "\n")) {
       perror("Error writing to file descriptor");
       pthread_mutex_unlock(&event->mutex);
       return 1;
