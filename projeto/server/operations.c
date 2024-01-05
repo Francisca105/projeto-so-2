@@ -8,6 +8,8 @@
 #include "common/io.h"
 #include "eventlist.h"
 
+#define WRITE_TO_PIPE_OP(fd, data, size) if (safe_write(fd, data, size) == 2) return 2
+
 static struct EventList* event_list = NULL;
 static unsigned int state_access_delay_us = 0;
 static size_t num_events;
@@ -205,10 +207,10 @@ int ems_show(int out_fd, unsigned int event_id) {
   size_t rows = event->rows;
   size_t cols = event->cols;
 
-  safe_write(out_fd, &ret, sizeof(int));
+  WRITE_TO_PIPE_OP(out_fd, &ret, sizeof(int));
 
-  safe_write(out_fd, &rows, sizeof(size_t));
-  safe_write(out_fd, &cols, sizeof(size_t));
+  WRITE_TO_PIPE_OP(out_fd, &rows, sizeof(size_t));
+  WRITE_TO_PIPE_OP(out_fd, &cols, sizeof(size_t));
 
   unsigned int seats[rows * cols];
 
@@ -216,7 +218,7 @@ int ems_show(int out_fd, unsigned int event_id) {
     seats[i] = event->data[i];
   }
 
-  safe_write(out_fd, seats, sizeof(unsigned int[rows * cols]));
+  WRITE_TO_PIPE_OP(out_fd, seats, sizeof(unsigned int[rows * cols]));
 
   pthread_mutex_unlock(&event->mutex);
   return 0;
@@ -236,15 +238,15 @@ int ems_list_events(int out_fd) {
   struct ListNode* current = event_list->head;
 
   int ret = 0;
-  safe_write(out_fd, &ret, sizeof(int));
+  WRITE_TO_PIPE_OP(out_fd, &ret, sizeof(int));
 
   if (current == NULL) {
-    safe_write(out_fd, &num_events, sizeof(size_t));
+    WRITE_TO_PIPE_OP(out_fd, &num_events, sizeof(size_t));
 
     pthread_rwlock_unlock(&event_list->rwl);
     return 0;
   }  
-  safe_write(out_fd, &num_events, sizeof(size_t));
+  WRITE_TO_PIPE_OP(out_fd, &num_events, sizeof(size_t));
   unsigned int events[num_events];
 
   for (size_t i = 0; i < num_events; i++) {
@@ -252,7 +254,7 @@ int ems_list_events(int out_fd) {
     current = current->next;
   }
 
-  safe_write(out_fd, &events, sizeof(unsigned int[num_events]));
+  WRITE_TO_PIPE_OP(out_fd, &events, sizeof(unsigned int[num_events]));
 
   pthread_rwlock_unlock(&event_list->rwl);
   return 0;

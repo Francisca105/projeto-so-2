@@ -32,7 +32,8 @@ void safe_read(int fd, void *buf, size_t size);
 /// @param fd The file descriptor to write to.
 /// @param buf Pointer to the variable to read the string from.
 /// @param size The number of bytes to write.
-void safe_write(int fd, const void *buf, size_t size);
+/// @return 0 if the write was sucessfull, 1 if failed and 2 if EPIPE occured
+int safe_write(int fd, const void *buf, size_t size);
 
 /// Creates a malloc with error checking.
 /// @param size 

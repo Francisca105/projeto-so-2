@@ -1,2 +1,1 @@
-se o cliente morre, o server vai com ele - FIX
 vou tirar os exit do server, a partir do momento que há um erro ficamos com deus

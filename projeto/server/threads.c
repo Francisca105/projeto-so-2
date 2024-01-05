@@ -13,6 +13,8 @@
 #include "common/io.h"
 #include "operations.h"
 
+#define WRITE_TO_PIPE(fd, data, size) if (safe_write(fd, data, size) == 2) goto end
+
 volatile int cond = 0;
 
 void sig_handler(int sig) {
@@ -54,6 +56,7 @@ void *worker_thread_func(void *args) {
   sigset_t set;
   sigemptyset(&set);
   sigaddset(&set, SIGUSR1);
+  sigaddset(&set, SIGPIPE);
   if (pthread_sigmask(SIG_BLOCK, &set, NULL) != 0) {
     fprintf(stderr, "Failed masking the signal\n");
     return NULL;
@@ -91,7 +94,7 @@ void *worker_thread_func(void *args) {
 
     fprintf(stdout, "[INFO]: Worker thread started\n");
 
-    safe_write(resp_pipe_fd, &session_id, sizeof(int));
+    WRITE_TO_PIPE(resp_pipe_fd, &session_id, sizeof(int));
 
     char code;
 
@@ -102,8 +105,6 @@ void *worker_thread_func(void *args) {
 
         switch (code) {
             case QUIT_CODE: {
-              close(req_pipe_fd);
-              close(resp_pipe_fd);
               break;
             }
             case CREATE_CODE: {
@@ -116,7 +117,7 @@ void *worker_thread_func(void *args) {
               safe_read(req_pipe_fd, &num_cols, sizeof(size_t));
 
               int res = ems_create(event_id_c, num_rows, num_cols);
-              safe_write(resp_pipe_fd, &res, sizeof(int));
+              WRITE_TO_PIPE(resp_pipe_fd, &res, sizeof(int));
               break;
             }
             case SHOW_CODE: {
@@ -126,7 +127,9 @@ void *worker_thread_func(void *args) {
               int res = ems_show(resp_pipe_fd, event_id_s);
               if(res == 1) {
                 fprintf(stderr, "Failed to show event\n");
-                safe_write(resp_pipe_fd, &res, sizeof(int));
+                WRITE_TO_PIPE(resp_pipe_fd, &res, sizeof(int));
+              } else if (res == 2) {
+                goto end;
               }
               break;
             }
@@ -135,7 +138,9 @@ void *worker_thread_func(void *args) {
               
               if(res == 1) {
                 fprintf(stderr, "Failed to list events\n");
-                safe_write(resp_pipe_fd, &res, sizeof(int));
+                WRITE_TO_PIPE(resp_pipe_fd, &res, sizeof(int));
+              } else if (res == 2) {
+                goto end;
               }
               break;
             }
@@ -153,15 +158,16 @@ void *worker_thread_func(void *args) {
               safe_read(req_pipe_fd, &ys, sizeof(size_t[num_seats]));
 
               int res = ems_reserve(event_id_r, num_seats, xs, ys);
-              safe_write(resp_pipe_fd, &res, sizeof(int));
+              WRITE_TO_PIPE(resp_pipe_fd, &res, sizeof(int));
               break;
             }
         }
     } while (code != QUIT_CODE);
 
-    fprintf(stdout, "[INFO]: Worker thread ended\n");
-    close(req_pipe_fd);
-    close(resp_pipe_fd);
+    end:
+      fprintf(stdout, "[INFO]: Worker thread ended\n");
+      close(req_pipe_fd);
+      close(resp_pipe_fd);
   }
 }
 

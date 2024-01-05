@@ -114,16 +114,23 @@ void safe_read(int fd, void *buf, size_t size) {
   } while (bytes_read == -1);
 }
 
-void safe_write(int fd, const void *buf, size_t size) {
+int safe_write(int fd, const void *buf, size_t size) {
   do {
     ssize_t bytes_written = write(fd, buf, size);
     if (bytes_written == -1) {
-      fprintf(stderr, "[ERR]: write failed: %s\n", strerror(errno));
-      // exit(EXIT_FAILURE);
+      if (errno == EPIPE) {
+        return 2;
+      } else {
+        fprintf(stderr, "[ERR]: write failed: %s\n", strerror(errno));
+        return 1;
+        // exit(EXIT_FAILURE);
+      }
     }
 
     size -= (size_t)bytes_written;
   } while (size > 0);
+
+  return 0;
 }
 
 int safe_open(const char *pathname, int flags) {
