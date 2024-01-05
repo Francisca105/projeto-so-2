@@ -16,7 +16,6 @@ char const* req_pipe_p;
 char const* resp_pipe_p;
 int session_id;
 
-// TODO: ver onde isto pode falhar e retornar 0 aí
 int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const* server_pipe_path) {
   req_pipe_p = req_pipe_path;
   resp_pipe_p = resp_pipe_path;

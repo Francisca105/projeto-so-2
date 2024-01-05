@@ -15,15 +15,14 @@
 
 #define WRITE_TO_PIPE(fd, data, size) if (safe_write(fd, data, size) == 2) goto end
 
-int cond = 0;
+int sig_flag = 0;
 
 void sig_handler(int sig) {
   if (sig == SIGUSR1) {
     if (signal(SIGUSR1, sig_handler) == SIG_ERR) {
-      cond = 2;      
-      // exit(EXIT_FAILURE);
+      sig_flag = 2;      
     }
-    cond = 1;
+    sig_flag = 1;
   }
 }
 
@@ -33,10 +32,10 @@ client_args produce(int fd) {
   char code;
   safe_read(fd, &code, sizeof(char));
 
-  if (cond) {
-    if (cond == 2) fprintf(stderr, "[ERR]: Failed to change how SIGUSR1 is handled\n");
+  if (sig_flag) {
+    if (sig_flag == 2) fprintf(stderr, "[ERR]: Failed to change how SIGUSR1 is handled\n");
     ems_list_and_show();
-    cond = 0;
+    sig_flag = 0;
   }
   
   char req_pipe_path[PIPE_NAME_SIZE];
@@ -59,8 +58,7 @@ void *worker_thread_func(void *args) {
   sigemptyset(&set);
   sigaddset(&set, SIGUSR1);
   if (pthread_sigmask(SIG_BLOCK, &set, NULL) != 0) {
-    fprintf(stderr, "Failed masking SIGUSR1\n");
-    // return NULL;
+    fprintf(stderr, "[ERR]: Failed masking SIGUSR1\n");
   };
 
   worker_args *w_args = (worker_args*) args;
@@ -175,7 +173,6 @@ void *worker_thread_func(void *args) {
 void *main_thread_func(void *arg) {
   if (signal(SIGUSR1, sig_handler) == SIG_ERR) {
     fprintf(stderr, "[ERR]: Failed to change how SIGUSR1 is handled\n");
-    // pthread_exit((void*)1);
   }
 
   sigset_t set;
@@ -196,17 +193,14 @@ void *main_thread_func(void *arg) {
   pthread_mutex_t mutex;
   if (pthread_mutex_init(&mutex, NULL) != 0) {
     fprintf(stderr, "[ERR]: Failed do initialize mutex\n");
-    // pthread_exit((void*)1);
   }
   pthread_cond_t podeProd;
   if (pthread_cond_init(&podeProd, NULL) != 0) {
     fprintf(stderr, "[ERR]: Failed do initialize conditional variable\n");
-    // pthread_exit((void*)1);
   }
   pthread_cond_t podeCons;
   if (pthread_cond_init(&podeCons, NULL) != 0) {
     fprintf(stderr, "[ERR]: Failed do initialize conditional variable\n");
-    // pthread_exit((void*)1);
   }
 
   open_pipe(server_pathname, PIPE_PERMS);
@@ -227,7 +221,6 @@ void *main_thread_func(void *arg) {
     args->podeProd = &podeProd;
     if (pthread_create(&worker_threads[i], NULL, worker_thread_func, args) != 0) {
       fprintf(stderr, "[ERR]: Failed to create worker thread\n");
-      // pthread_exit((void*)1);
     }
   }
 
@@ -237,10 +230,10 @@ void *main_thread_func(void *arg) {
     client_args item = produce(server_fd);
     pthread_mutex_lock(&mutex);
     while (count == MAX_SESSION_COUNT) {
-      if (cond) {
-        if (cond == 2) fprintf(stderr, "[ERR]: Failed to change how SIGUSR1 is handled\n");
+      if (sig_flag) {
+        if (sig_flag == 2) fprintf(stderr, "[ERR]: Failed to change how SIGUSR1 is handled\n");
         ems_list_and_show();
-        cond = 0;
+        sig_flag = 0;
       }
     pthread_cond_wait(&podeProd, &mutex);
     }
