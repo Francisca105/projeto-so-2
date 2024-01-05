@@ -30,24 +30,22 @@ client_args produce(int fd) {
   client_args ret;
   
   char code;
-  safe_read(fd, &code, sizeof(char));
+  safe_read_s(fd, &code, sizeof(char), &sig_flag, ems_list_and_show);
+  
+  char req_pipe_path[PIPE_NAME_SIZE];
+  char resp_pipe_path[PIPE_NAME_SIZE];
+
+  safe_read_s(fd, req_pipe_path, PIPE_NAME_SIZE, &sig_flag, ems_list_and_show);
+  safe_read_s(fd, resp_pipe_path, PIPE_NAME_SIZE, &sig_flag, ems_list_and_show);
+
+  strncpy(ret.req_pipe_path, req_pipe_path, PIPE_NAME_SIZE);
+  strncpy(ret.resp_pipe_path, resp_pipe_path, PIPE_NAME_SIZE);
 
   if (sig_flag) {
     if (sig_flag == 2) fprintf(stderr, "[ERR]: Failed to change how SIGUSR1 is handled\n");
     ems_list_and_show();
     sig_flag = 0;
-  }
-  
-  char req_pipe_path[PIPE_NAME_SIZE];
-  char resp_pipe_path[PIPE_NAME_SIZE];
-
-  safe_read(fd, req_pipe_path, PIPE_NAME_SIZE);
-  safe_read(fd, resp_pipe_path, PIPE_NAME_SIZE);
-  // fprintf(stdout, "[INFO]: Request pipe: %s\n", req_pipe_path);
-  // fprintf(stdout, "[INFO]: Response pipe: %s\n", resp_pipe_path);
-
-  strncpy(ret.req_pipe_path, req_pipe_path, PIPE_NAME_SIZE);
-  strncpy(ret.resp_pipe_path, resp_pipe_path, PIPE_NAME_SIZE);
+  } 
 
   return ret;
 }

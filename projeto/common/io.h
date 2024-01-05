@@ -28,6 +28,14 @@ int print_str(int fd, const char *str);
 /// @param size The maximum number of bytes to read.
 void safe_read(int fd, void *buf, size_t size);
 
+/// Safely reads something from the given file descriptor and checks for the USR1 signal.
+/// @param fd The file descriptor to read from.
+/// @param buf Pointer to the variable to store the string in.
+/// @param size The maximum number of bytes to read.
+/// @param flag The flag that indicates if a SIGUSR1 signal was received.
+/// @param func A function to list and show the events. (Exercise 2)
+void safe_read_s(int fd, void *buf, size_t size, int *flag, int (*)());
+
 /// Safely writes something to the given file descriptor.
 /// @param fd The file descriptor to write to.
 /// @param buf Pointer to the variable to read the string from.

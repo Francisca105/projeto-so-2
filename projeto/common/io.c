@@ -13,6 +13,9 @@
 #include <fcntl.h>
 #include <stdio.h>
 
+// It allows the ems_show_and_list() to be passed as an argument
+typedef int (*FunctionType)();
+
 int parse_uint(int fd, unsigned int *value, char *next) {
   char buf[16];
 
@@ -107,6 +110,30 @@ void safe_read(int fd, void *buf, size_t size) {
         continue;
       } else {
         fprintf(stderr, "[ERR]: read failed: %s\n", strerror(errno));
+        return;
+      }
+    }
+  } while (bytes_read == -1);
+}
+
+void safe_read_s(int fd, void *buf, size_t size, int *flag, FunctionType func) {
+  ssize_t bytes_read;
+
+  do {
+    bytes_read = read(fd, buf, size);
+    if (bytes_read < 1) {
+      if (bytes_read == 0) {
+        fprintf(stderr, "[ERR]: Unexpected end of file\n");
+      } else if (errno == EINTR) {
+        if (*flag) {
+          if (*flag == 2) fprintf(stderr, "[ERR]: Failed to change how SIGUSR1 is handled\n");
+          func();
+          *flag = 0;
+      }
+        continue;
+      } else {
+        fprintf(stderr, "[ERR]: read failed: %s\n", strerror(errno));
+        return;
       }
     }
   } while (bytes_read == -1);
