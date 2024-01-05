@@ -118,7 +118,7 @@ int safe_write(int fd, const void *buf, size_t size) {
     if (bytes_written == -1) {
       if (errno == EPIPE) {
         return 2;
-      } else {
+      } else if (errno != EINTR) {
         fprintf(stderr, "[ERR]: write failed: %s\n", strerror(errno));
         return 1;
       }
