@@ -15,12 +15,13 @@
 
 #define WRITE_TO_PIPE(fd, data, size) if (safe_write(fd, data, size) == 2) goto end
 
-volatile int cond = 0;
+int cond = 0;
 
 void sig_handler(int sig) {
   if (sig == SIGUSR1) {
     if (signal(SIGUSR1, sig_handler) == SIG_ERR) {
-      exit(EXIT_FAILURE);
+      cond = 2;      
+      // exit(EXIT_FAILURE);
     }
     cond = 1;
   }
@@ -33,6 +34,7 @@ client_args produce(int fd) {
   safe_read(fd, &code, sizeof(char));
 
   if (cond) {
+    if (cond == 2) fprintf(stderr, "[ERR]: Failed to change how SIGUSR1 is handled\n");
     ems_list_and_show();
     cond = 0;
   }
@@ -42,8 +44,8 @@ client_args produce(int fd) {
 
   safe_read(fd, req_pipe_path, PIPE_NAME_SIZE);
   safe_read(fd, resp_pipe_path, PIPE_NAME_SIZE);
-  fprintf(stderr, "Request pipe: %s\n", req_pipe_path);
-  fprintf(stderr, "Response pipe: %s\n", resp_pipe_path);
+  // fprintf(stdout, "[INFO]: Request pipe: %s\n", req_pipe_path);
+  // fprintf(stdout, "[INFO]: Response pipe: %s\n", resp_pipe_path);
 
   strncpy(ret.req_pipe_path, req_pipe_path, PIPE_NAME_SIZE);
   strncpy(ret.resp_pipe_path, resp_pipe_path, PIPE_NAME_SIZE);
@@ -56,10 +58,9 @@ void *worker_thread_func(void *args) {
   sigset_t set;
   sigemptyset(&set);
   sigaddset(&set, SIGUSR1);
-  sigaddset(&set, SIGPIPE);
   if (pthread_sigmask(SIG_BLOCK, &set, NULL) != 0) {
-    fprintf(stderr, "Failed masking the signal\n");
-    return NULL;
+    fprintf(stderr, "Failed masking SIGUSR1\n");
+    // return NULL;
   };
 
   worker_args *w_args = (worker_args*) args;
@@ -92,7 +93,7 @@ void *worker_thread_func(void *args) {
     int req_pipe_fd = safe_open(req_pipe_path, O_RDONLY);
     int resp_pipe_fd = safe_open(resp_pipe_path, O_WRONLY);
 
-    fprintf(stdout, "[INFO]: Worker thread started\n");
+    fprintf(stdout, "[INFO]: Client started a new session: %d\n", session_id);
 
     WRITE_TO_PIPE(resp_pipe_fd, &session_id, sizeof(int));
 
@@ -165,7 +166,7 @@ void *worker_thread_func(void *args) {
     } while (code != QUIT_CODE);
 
     end:
-      fprintf(stdout, "[INFO]: Worker thread ended\n");
+      fprintf(stdout, "[INFO]: Client ended session: %d\n", session_id);
       close(req_pipe_fd);
       close(resp_pipe_fd);
   }
@@ -176,6 +177,13 @@ void *main_thread_func(void *arg) {
     fprintf(stderr, "[ERR]: Failed to change how SIGUSR1 is handled\n");
     // pthread_exit((void*)1);
   }
+
+  sigset_t set;
+  sigemptyset(&set);
+  sigaddset(&set, SIGPIPE);
+  if (pthread_sigmask(SIG_BLOCK, &set, NULL) != 0) {
+    fprintf(stderr, "[ERR]: Failed masking SIGPIPE\n");
+  };
 
   char *server_pathname = (char*) arg;
 
@@ -230,6 +238,7 @@ void *main_thread_func(void *arg) {
     pthread_mutex_lock(&mutex);
     while (count == MAX_SESSION_COUNT) {
       if (cond) {
+        if (cond == 2) fprintf(stderr, "[ERR]: Failed to change how SIGUSR1 is handled\n");
         ems_list_and_show();
         cond = 0;
       }

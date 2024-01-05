@@ -1,1 +1,1 @@
-vou tirar os exit do server, a partir do momento que há um erro ficamos com deus
+nas worker threads, erros devem levar à sua terminação ???

@@ -48,6 +48,7 @@ int main(int argc, char* argv[]) {
     return 1;
   } 
   
+  // Server should not end
   void *ret;
   if (pthread_join(server, &ret) != 0) {
     fprintf(stderr, "Failed to join server\n");
