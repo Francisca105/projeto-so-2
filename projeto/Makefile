@@ -14,7 +14,7 @@ endif
 
 all: server/ems client/client
 
-server/ems: common/io.o common/constants.h server/main.c server/operations.o server/eventlist.o
+server/ems: common/io.o common/constants.h server/main.c server/operations.o server/eventlist.o server/threads.o
 	$(CC) $(CFLAGS) $(SLEEP) -o $@ $^
 
 client/client: common/io.o client/main.c client/api.o client/parser.o
@@ -23,11 +23,26 @@ client/client: common/io.o client/main.c client/api.o client/parser.o
 %.o: %.c %.h
 	$(CC) $(CFLAGS) -c ${@:.o=.c} -o $@
 
-run: server/ems
-	@./server/ems
+run_s: server/ems
+	@./server/ems /tmp/server.pipe
+
+run_ca: client/client
+	@./client/client /tmp/request_a.pipe /tmp/response_a.pipe /tmp/server.pipe ./jobs/a.jobs
+
+run_cb: client/client
+	@./client/client /tmp/request_b.pipe /tmp/response_b.pipe /tmp/server.pipe ./jobs/b.jobs
+
+run_cc: client/client
+	@./client/client /tmp/request_c.pipe /tmp/response_c.pipe /tmp/server.pipe ./jobs/c.jobs
+
+run_cd: client/client
+	@./client/client /tmp/request_c.pipe /tmp/response_c.pipe /tmp/server.pipe ./jobs/d.jobs
+	
+run_ce: client/client
+	@./client/client /tmp/request_c.pipe /tmp/response_c.pipe /tmp/server.pipe ./jobs/e.jobs
 
 clean:
-	rm -f common/*.o client/*.o server/*.o server/ems client/client
+	rm -f common/*.o client/*.o server/*.o server/ems client/client jobs/*.out
 
 format:
 	@which clang-format >/dev/null 2>&1 || echo "Please install clang-format to run this command"

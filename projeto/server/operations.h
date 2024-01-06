@@ -37,4 +37,15 @@ int ems_show(int out_fd, unsigned int event_id);
 /// @return 0 if the events were printed successfully, 1 otherwise.
 int ems_list_events(int out_fd);
 
+/// Prints all the events and their reservations.
+/// Its built over the base code for the ems_show and ems_list_events functions.
+/// @return 0 if the events were printed successfully, 1 otherwise.
+int ems_list_and_show();
+
+/// ems_show from base_code.
+/// Prints the given event.
+/// @param event_id Id of the event to print.
+/// @return 0 if the event was printed successfully, 1 otherwise.
+int ems_show_base(unsigned int event_id);
+
 #endif  // SERVER_OPERATIONS_H

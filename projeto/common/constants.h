@@ -1,0 +1,14 @@
+#define MAX_RESERVATION_SIZE 256
+#define STATE_ACCESS_DELAY_US 500000  // 500ms
+#define MAX_JOB_FILE_NAME_SIZE 256
+#define MAX_SESSION_COUNT 8
+
+#define PIPE_NAME_SIZE 40
+#define PIPE_PERMS 0640
+
+#define SETUP_CODE '1'
+#define QUIT_CODE '2'
+#define CREATE_CODE '3'
+#define RESERVE_CODE '4'
+#define SHOW_CODE '5'
+#define LIST_CODE '6'
