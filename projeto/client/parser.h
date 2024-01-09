@@ -9,6 +9,7 @@ enum Command {
   CMD_SHOW,
   CMD_LIST_EVENTS,
   CMD_WAIT,
+  CMD_DISP,
   CMD_HELP,
   CMD_EMPTY,
   CMD_INVALID,

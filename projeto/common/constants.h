@@ -12,3 +12,4 @@
 #define RESERVE_CODE '4'
 #define SHOW_CODE '5'
 #define LIST_CODE '6'
+#define DISP_CODE '7'

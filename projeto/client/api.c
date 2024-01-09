@@ -147,3 +147,14 @@ int ems_list_events(int out_fd) {
 
   return 0;
 }
+
+int ems_disp() {
+  char code = '7';
+  safe_write(req_pipe_fd, &code, sizeof(code));
+  safe_write(req_pipe_fd, &session_id, sizeof(int));
+
+  int res;
+  safe_read(resp_pipe_fd, &res, sizeof(int));
+
+  return res;
+}

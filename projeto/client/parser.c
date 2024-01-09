@@ -58,6 +58,20 @@ enum Command get_next(int fd) {
 
       return CMD_LIST_EVENTS;
 
+    case 'D':
+      if (read(fd, buf + 1, 3) != 3 || strncmp(buf, "DISP", 4) != 0) {
+        cleanup(fd);
+        return CMD_INVALID;
+      }
+
+      if (read(fd, buf + 4, 1) != 0 && buf[4] != '\n') {
+        cleanup(fd);
+        return CMD_INVALID;
+      }
+
+      return CMD_DISP;
+
+
     case 'W':
       if (read(fd, buf + 1, 4) != 4 || strncmp(buf, "WAIT ", 5) != 0) {
         cleanup(fd);

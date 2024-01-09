@@ -105,6 +105,12 @@ void *worker_thread_func(void *args) {
             case QUIT_CODE: {
               break;
             }
+            case DISP_CODE: {
+              int res = ems_list_and_show();
+              WRITE_TO_PIPE(resp_pipe_fd, &res, sizeof(int));
+
+              break;
+            }
             case CREATE_CODE: {
               unsigned int event_id_c;
               size_t num_rows;
